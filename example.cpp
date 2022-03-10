@@ -1,6 +1,49 @@
 #include <windows.h>
+#include <filesystem>
+#include <thread>
+#include <iostream>
+#include <sstream>
+#include <vector>
+#include <signal.h>
+#include <tchar.h>
+#include <tlhelp32.h>
+#include <unordered_map>
+#include <string>
 
 
+typedef std::unordered_map < DWORD, std::string > PROCESSESMAP;
+
+
+using namespace std;
+
+
+
+BOOL GetProcessNameAndId(PROCESSESMAP* procMap) {
+
+	HANDLE hProcessSnap;
+	PROCESSENTRY32 pe32;
+
+	hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hProcessSnap == INVALID_HANDLE_VALUE) {
+		return (FALSE);
+	}
+
+	pe32.dwSize = sizeof(PROCESSENTRY32);
+
+	if (!Process32First(hProcessSnap, &pe32)) {
+		CloseHandle(hProcessSnap);
+		return (FALSE);
+	}
+
+	do {
+
+		procMap->insert(std::make_pair(pe32.th32ProcessID, pe32.szExeFile));
+
+	} while (Process32Next(hProcessSnap, &pe32));
+
+	CloseHandle(hProcessSnap);
+	return (TRUE);
+}
 
 
 LPCSTR GetClipBoardService() {
@@ -78,7 +121,7 @@ void ClearClipBoard() {
 
 	const auto hScm = OpenSCManager(nullptr, nullptr, NULL);
 	const auto hSc = OpenService(hScm, GetClipBoardService(), SERVICE_QUERY_STATUS);
-										// ^ The clipboard service
+	// ^ The clipboard service
 
 	SERVICE_STATUS_PROCESS ssp = {};
 
@@ -101,4 +144,7 @@ void ClearClipBoard() {
 }
 
 
-    //use ClearClipBoard();
+int main()
+{	
+	ClearClipBoard();
+}
